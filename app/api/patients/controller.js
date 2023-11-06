@@ -2,7 +2,6 @@ const pasien = require('./model');
 const Jadwal = require('../user/modeljadwal');
 const sendResponse = require('../../respon');
 
-
 const index = async (req, res, next) => {
   try {
     const result = await pasien.find();
@@ -13,15 +12,13 @@ const index = async (req, res, next) => {
   }
 };
 
-
-
 const find = async (req, res, next) => {
   try {
     const { id } = req.params;
     const result = await pasien.findOne({ nomor_antrian: id });
 
     if (!result) {
-      return sendResponse(404, null, "Pasien tidak di temukan", res);
+      return sendResponse(404, null, "Pasien tidak ditemukan", res);
     }
 
     sendResponse(200, result, "yang ini bray", res);
@@ -30,44 +27,46 @@ const find = async (req, res, next) => {
   }
 };
 
-
+const moment = require('moment-timezone');
 
 const create = async (req, res, next) => {
   try {
-    const { nama_pasien, nama_wali, alamat, no_telp, ttl, gol_darah, bb, tb } = req.body;
+    const { email, nama_pasien, nama_wali, alamat, no_telp, ttl, gol_darah, bb, tb, status } = req.body;
 
-    if (!gol_darah || !no_telp || !nama_wali || !nama_pasien) {
-      return sendResponse(400, null, "Field yang diperlukan harus diisi", res);
+    const jadwal = await Jadwal.findOne().sort({ tanggal: 1 });
+
+    if (!jadwal) {
+      return res.status(404).json({ error: 'Jadwal tidak ditemukan' });
     }
 
-    const jadwal = await Jadwal.findOne();
+    const totalAntrian = jadwal.antrian.length;
 
-    if (!jadwal || !jadwal.tanggal) {
-      return sendResponse(400, null, "Tidak ada jadwal yang tersedia", res);
+    if (totalAntrian === 0) {
+      return res.status(400).json({ error: 'Antrian sudah habis' });
     }
 
-    const today = new Date().toISOString().split('T')[0];
+    const antrianPertama = jadwal.antrian[0];
+    const { waktu_mulai, waktu_selesai, tanggal } = antrianPertama;
 
-    if (jadwal.tanggal.toISOString().split('T')[0] !== today) {
-      return sendResponse(400, null, "Tidak bisa menambahkan pasien pada tanggal ini", res);
+    const tanggalCreate = moment().tz('Asia/Jakarta').startOf('day');
+    const tanggalJadwal = moment(tanggal).tz('Asia/Jakarta').startOf('day');
+
+    console.log(tanggalCreate);
+    console.log(tanggalJadwal);
+    if (!tanggalCreate.isSame(tanggalJadwal)) {
+      return res.status(400).json({ error: 'Tanggal create tidak sesuai dengan tanggal jadwal' });
     }
 
-    let lastPatient = await pasien.findOne().sort({ nomor_antrian: -1 });
+    
+    jadwal.antrian.shift();
+    await jadwal.save();
 
-    if (!lastPatient) {
-      lastPatient = { nomor_antrian: 0 };
-    }
+    const nomorAntrianTerakhir = await pasien.findOne().sort({ nomor_antrian: -1 }).select('nomor_antrian');
+    const nomorAntrian = nomorAntrianTerakhir ? nomorAntrianTerakhir.nomor_antrian + 1 : 1;
 
-    const count = lastPatient.nomor_antrian;
-
-    if (count >= 12) {
-      return sendResponse(400, null, "Batas jumlah pasien per hari telah tercapai", res);
-    }
-
-    let nomor_antrian = count + 1;
-
-    const result = await pasien.create({
-      nomor_antrian,
+    const newPatient = new pasien({
+      email,
+      nomor_antrian: nomorAntrian,
       nama_pasien,
       nama_wali,
       alamat,
@@ -76,15 +75,20 @@ const create = async (req, res, next) => {
       gol_darah,
       bb,
       tb,
-      waktu_tunggu: jadwal.jam_operasional, // Menambahkan waktu_tunggu dari jam_operasional di jadwal
-      jadwal: today,
+      waktu_tunggu: [{ waktu_mulai, waktu_selesai }],
+      status,
+      create_at: tanggal
     });
 
-    sendResponse(201, { result }, "Pasien berhasil ditambahkan", res);
-  } catch (err) {
-    next(err);
+    const savedPatient = await newPatient.save();
+
+    res.status(201).json(savedPatient);
+  } catch (error) {
+    next(error);
   }
 };
+
+
 
 const update = async (req, res, next) => {
   try {

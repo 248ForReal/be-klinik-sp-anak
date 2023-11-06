@@ -3,6 +3,11 @@ const { Schema, model } = mongoose;
 
 const patientSchema = new Schema(
   {
+    email: {
+      type: String,
+      required: true,
+      unique: true
+    },
     nomor_antrian: {
       type: Number,
       required: true
@@ -39,8 +44,19 @@ const patientSchema = new Schema(
       type: Number,
       required: true
     },
-    waktu_tunggu: {
-      type: String
+    waktu_tunggu: [{
+      waktu_mulai: {
+        type: Date,
+        required: true
+      },
+      waktu_selesai: {
+        type: Date,
+        required: true
+      }
+    }],
+    status: {
+      type: String,
+      required: true
     }
   },
   {
@@ -49,4 +65,4 @@ const patientSchema = new Schema(
   }
 );
 
-module.exports = model('', patientSchema);
+module.exports = model('Patient', patientSchema);
