@@ -4,7 +4,7 @@ const { Schema, model } = mongoose;
 const patientSchema = new Schema(
   {
     nomor_antrian: {
-      type: String,
+      type: Number,
       required: true
     },
     nama_pasien: {
@@ -39,7 +39,7 @@ const patientSchema = new Schema(
       type: Number,
       required: true
     },
-    jadwal: {
+    waktu_tunggu: {
       type: String
     }
   },

@@ -1,4 +1,5 @@
-const pasien = require('./model'); 
+const pasien = require('./model');
+const Jadwal = require('../user/modeljadwal');
 const sendResponse = require('../../respon');
 
 
@@ -17,26 +18,54 @@ const index = async (req, res, next) => {
 const find = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const result = await pasien.findOne({ nomor_antrian : id });
+    const result = await pasien.findOne({ nomor_antrian: id });
 
     if (!result) {
       return sendResponse(404, null, "Pasien tidak di temukan", res);
     }
 
-    sendResponse(200,result, "yang ini bray", res);
+    sendResponse(200, result, "yang ini bray", res);
   } catch (err) {
     next(err);
   }
 };
 
 
+
 const create = async (req, res, next) => {
   try {
-    const { nomor_antrian, nama_pasien, nama_wali, alamat, no_telp, ttl, gol_darah, bb, tb, jadwal } = req.body;
+    const { nama_pasien, nama_wali, alamat, no_telp, ttl, gol_darah, bb, tb } = req.body;
 
-    if (!gol_darah || !no_telp || !nama_wali || !nama_pasien || !nomor_antrian) {
+    if (!gol_darah || !no_telp || !nama_wali || !nama_pasien) {
       return sendResponse(400, null, "Field yang diperlukan harus diisi", res);
     }
+
+    const jadwal = await Jadwal.findOne();
+
+    if (!jadwal || !jadwal.tanggal) {
+      return sendResponse(400, null, "Tidak ada jadwal yang tersedia", res);
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+
+    if (jadwal.tanggal.toISOString().split('T')[0] !== today) {
+      return sendResponse(400, null, "Tidak bisa menambahkan pasien pada tanggal ini", res);
+    }
+
+    let lastPatient = await pasien.findOne().sort({ nomor_antrian: -1 });
+
+    if (!lastPatient) {
+      lastPatient = { nomor_antrian: 0 };
+    }
+
+    const count = lastPatient.nomor_antrian;
+
+    if (count >= 12) {
+      return sendResponse(400, null, "Batas jumlah pasien per hari telah tercapai", res);
+    }
+
+    let nomor_antrian = count + 1;
+
     const result = await pasien.create({
       nomor_antrian,
       nama_pasien,
@@ -47,14 +76,15 @@ const create = async (req, res, next) => {
       gol_darah,
       bb,
       tb,
-      jadwal,
+      waktu_tunggu: jadwal.jam_operasional, // Menambahkan waktu_tunggu dari jam_operasional di jadwal
+      jadwal: today,
     });
-    sendResponse(201, {result }, "masuk Bray", res);
+
+    sendResponse(201, { result }, "Pasien berhasil ditambahkan", res);
   } catch (err) {
     next(err);
   }
 };
-
 
 const update = async (req, res, next) => {
   try {
@@ -86,7 +116,7 @@ const destroy = async (req, res, next) => {
       return sendResponse(404, null, "Data pasien tidak ditemukan", res);
     }
 
-    sendResponse(200,result, "Hilang Brayy", res);
+    sendResponse(200, result, "Hilang Brayy", res);
   } catch (err) {
     next(err);
   }
