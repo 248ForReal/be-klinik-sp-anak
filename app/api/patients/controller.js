@@ -2,6 +2,8 @@ const pasien = require('./model');
 const Jadwal = require('../user/modeljadwal');
 const sendResponse = require('../../respon');
 
+
+
 const index = async (req, res, next) => {
   try {
     const result = await pasien.find();
@@ -27,46 +29,34 @@ const find = async (req, res, next) => {
   }
 };
 
-const moment = require('moment-timezone');
 
 const create = async (req, res, next) => {
   try {
     const { email, nama_pasien, nama_wali, alamat, no_telp, ttl, gol_darah, bb, tb, status } = req.body;
 
-    const jadwal = await Jadwal.findOne().sort({ tanggal: 1 });
+    const existingPatient = await pasien.findOne({ email });
+
+    if (existingPatient) {
+      return  sendResponse(400, null, 'Email sudah terdaftar', res);
+    }
+
+    const jadwal = await Jadwal.findOne().sort({ createdAt: -1 });
 
     if (!jadwal) {
-      return res.status(404).json({ error: 'Jadwal tidak ditemukan' });
+      return  sendResponse(400, null, 'Jadwal Tidak Tersedia', res);
     }
 
-    const totalAntrian = jadwal.antrian.length;
-
-    if (totalAntrian === 0) {
-      return res.status(400).json({ error: 'Antrian sudah habis' });
+    if (jadwal.antrian.length === 0) {
+      return sendResponse(400, null, 'Antrian sudah habis', res);
     }
 
-    const antrianPertama = jadwal.antrian[0];
-    const { waktu_mulai, waktu_selesai, tanggal } = antrianPertama;
+    const antrianPertama = jadwal.antrian.shift();
+    const { waktu_mulai, waktu_selesai, nomor_antrian } = antrianPertama;
 
-    const tanggalCreate = moment().tz('Asia/Jakarta').startOf('day');
-    const tanggalJadwal = moment(tanggal).tz('Asia/Jakarta').startOf('day');
-
-    console.log(tanggalCreate);
-    console.log(tanggalJadwal);
-    if (!tanggalCreate.isSame(tanggalJadwal)) {
-      return res.status(400).json({ error: 'Tanggal create tidak sesuai dengan tanggal jadwal' });
-    }
-
-    
-    jadwal.antrian.shift();
     await jadwal.save();
-
-    const nomorAntrianTerakhir = await pasien.findOne().sort({ nomor_antrian: -1 }).select('nomor_antrian');
-    const nomorAntrian = nomorAntrianTerakhir ? nomorAntrianTerakhir.nomor_antrian + 1 : 1;
-
     const newPatient = new pasien({
       email,
-      nomor_antrian: nomorAntrian,
+      nomor_antrian,
       nama_pasien,
       nama_wali,
       alamat,
@@ -77,12 +67,11 @@ const create = async (req, res, next) => {
       tb,
       waktu_tunggu: [{ waktu_mulai, waktu_selesai }],
       status,
-      create_at: tanggal
+      createdAt: new Date()
     });
 
     const savedPatient = await newPatient.save();
-
-    res.status(201).json(savedPatient);
+    sendResponse(201, savedPatient, 'Pasien berhasil dibuat', res);
   } catch (error) {
     next(error);
   }
@@ -90,14 +79,19 @@ const create = async (req, res, next) => {
 
 
 
+
+
 const update = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { nomor_antrian, nama_pasien, nama_wali, alamat, no_telp, ttl, gol_darah, bb, tb, jadwal } = req.body;
+
+    const updatedData = {
+      status: "mulai" // Mengubah status menjadi "mulai"
+    };
 
     const result = await pasien.findOneAndUpdate(
       { nomor_antrian: id },
-      { nomor_antrian, nama_pasien, nama_wali, alamat, no_telp, ttl, gol_darah, bb, tb, jadwal },
+      updatedData,
       { new: true, runValidators: true }
     );
 
@@ -105,7 +99,26 @@ const update = async (req, res, next) => {
       return sendResponse(404, null, "Data pasien tidak ditemukan", res);
     }
 
-    sendResponse(200, result, "berhasil di update Bray", res);
+    const waktuMulai = new Date(result.waktu_tunggu[0].waktu_mulai);
+    const waktuSelesai = new Date(result.waktu_tunggu[0].waktu_selesai);
+    const durasiWaktu = Math.ceil((waktuSelesai.getTime() - waktuMulai.getTime()) / 1000);
+
+    console.log(`Durasi waktu: ${durasiWaktu} detik`);
+
+    let sisaWaktu = durasiWaktu;
+
+    const timer = setInterval(() => { 
+      if (sisaWaktu <= 0) {
+        clearInterval(timer);
+        console.log("Timer selesai");
+        // Lakukan tindakan setelah timer selesai
+      } else {
+        console.log(`Sisa waktu: ${sisaWaktu} detik`);
+        sisaWaktu--;
+      }
+    }, 1000);
+
+    sendResponse(200, { ...result._doc, durasiWaktu }, "Data berhasil diperbarui", res);
   } catch (err) {
     next(err);
   }
