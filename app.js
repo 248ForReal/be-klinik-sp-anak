@@ -4,6 +4,7 @@ const cookieParser = require('cookie-parser');
 const logger = require('morgan');
 const respon = require('./app/respon');
 const cookieSession = require('cookie-session');
+const cors = require('cors');
 const PatientRouter = require('./app/api/patients/router');
 const UserRouter = require('./app/api/user/routeuser');
 const User = require('./app/api/user/modeluser');
@@ -20,6 +21,7 @@ app.use(cookieSession({
   collectionName: 'user'
 }));
 
+app.use(cors());
 app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
