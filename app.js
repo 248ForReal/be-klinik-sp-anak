@@ -5,11 +5,11 @@ const logger = require('morgan');
 const respon = require('./app/respon');
 const cookieSession = require('cookie-session');
 const cors = require('cors');
-const PatientRouter = require('./app/api/patients/router');
-const UserRouter = require('./app/api/user/routeuser');
-const User = require('./app/api/user/modeluser');
-const Jadwal = require('./app/api/user/modeljadwal');
-const pasien = require('./app/api/patients/model');
+const PatientRouter = require('./app/api/admin/router');
+const UserRouter = require('./app/api/user/route');
+const User = require('./app/api/model/modeluser');
+const Jadwal = require('./app/api/model/modeljadwal');
+const pasien = require('./app/api/model/model');
 
 require('dotenv').config();
 const app = express();
@@ -32,79 +32,43 @@ app.get('/', (req, res) => {
   respon(200, 'aman', 'ini awal', res);
 });
 
-
-
-app.post('/regis', async (req, res, next) => {
-  try {
-    const { email, nama_pasien, nama_wali, alamat, no_telp, ttl, gol_darah, bb, tb, status } = req.body;
-
-    const existingPatient = await pasien.findOne({ email });
-
-    if (existingPatient) {
-      return respon(400, null, 'Email sudah terdaftar', res);
-    }
-
-    const jadwal = await Jadwal.findOne().sort({ createdAt: -1 });
-
-    if (!jadwal) {
-      return respon(400, null, 'Jadwal Tidak Tersedia', res);
-    }
-
-    if (jadwal.antrian.length === 0) {
-      return respon(400, null, 'Antrian sudah habis', res);
-    }
-
-    const antrianPertama = jadwal.antrian.shift();
-    const { waktu_mulai, waktu_selesai, nomor_antrian } = antrianPertama;
-
-    await jadwal.save();
-    const newPatient = new pasien({
-      email,
-      nomor_antrian,
-      nama_pasien,
-      nama_wali,
-      alamat,
-      no_telp,
-      ttl,
-      gol_darah,
-      bb,
-      tb,
-      waktu_tunggu: [{ waktu_mulai, waktu_selesai }],
-      status,
-      createdAt: new Date()
-    });
-
-    const savedPatient = await newPatient.save();
-
-    const newUser = new User({
-      uuid: '', 
-      nama: nama_pasien, 
-      email,
-      role: 'user' 
-    });
-
-    await newUser.save();
-
-    respon(201, savedPatient, 'Pasien berhasil dibuat', res);
-  } catch (error) {
-    next(error);
-  }
-});
-
-
-
 app.post('/login', async (req, res) => {
-  const { email } = req.body;
+  const { email, uuid } = req.body; 
+
   try {
     const user = await User.findOne({ email: email });
 
     if (!user) {
-      respon(404, null, 'Nama atau email salah', res);
+      
+      const newUser = new User({
+        email: email,
+        nama: '', 
+        role: 'user', 
+        uuid: uuid 
+      });
+      await newUser.save();
+
+      req.session.user = {
+        uuid: newUser.uuid, 
+        nama: newUser.nama,
+        email: newUser.email,
+        role: newUser.role
+      };
+      respon(200, 'Login berhasil', null, res);
     } else {
+      
       if (req.session.user && req.session.user.email === email) {
         respon(403, null, 'Anda telah login dengan akun ini', res);
       } else {
+        
+        if (!user.uuid) {
+
+          user.uuid = uuid;
+          await user.save();
+        }
+
         req.session.user = {
+          uuid: user.uuid,
           nama: user.nama,
           email: user.email,
           role: user.role

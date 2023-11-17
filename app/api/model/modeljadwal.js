@@ -8,15 +8,15 @@ const antrianSchema = new Schema({
 });
 
 const jadwalSchema = new Schema({
-    tanggal: { type: Date, required: true },
-    jam_pertama: { type: Date, required: true },
-    jam_kedua: { type: Date, required: true },
-    antrian: [antrianSchema],
-    createdAt: { type: Date, default: Date.now }
-  }, 
-  {
-    collection: 'jadwal'
-  });
+  nomor_id: { type: Number, required:true},
+  tanggal: { type: Date, required: true },
+  jam_pertama: { type: Date, required: true },
+  jam_kedua: { type: Date, required: true },
+  antrian: [antrianSchema],
+  createdAt: { type: Date, default: Date.now }
+}, {
+  collection: 'jadwal'
+});
 
 const Jadwal = mongoose.model('Jadwal', jadwalSchema);
 
