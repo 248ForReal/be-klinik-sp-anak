@@ -11,4 +11,4 @@ const response = (status_code, data , message, res ) =>{
     })
 }
 
-module.exports = response;  
+module.exports = response; 

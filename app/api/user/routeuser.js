@@ -4,7 +4,7 @@ const { getAllUsers, getAllJadwal, createJadwal } = require('./controlleruser')
 
 const { checkAdminRole, checkUserRole } = require('../../middleware/auth');
 
-router.get('/users',checkAdminRole, getAllUsers);
+router.get('/users', getAllUsers);
 router.get('/jadwal', getAllJadwal);
 router.post('/buat',createJadwal);
 module.exports = router;

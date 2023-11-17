@@ -76,14 +76,7 @@ app.post('/regis', async (req, res, next) => {
 
     const savedPatient = await newPatient.save();
 
-    const newUser = new User({
-      uuid: '', 
-      nama: nama_pasien, 
-      email,
-      role: 'user' 
-    });
-
-    await newUser.save();
+  
 
     respon(201, savedPatient, 'Pasien berhasil dibuat', res);
   } catch (error) {
