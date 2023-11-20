@@ -15,7 +15,7 @@ const { checkAdminRole, checkUserRole } = require('../../middleware/auth');
 
 
 //liat semua antrian
-router.get('/pasien', getallantrian);
+router.get('/pasien', getallantrian,checkAdminRole);
 
 //liat pasien per-nomor antrian
 router.get('/pasien/:id', findantrian);

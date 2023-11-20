@@ -74,9 +74,8 @@ const createJadwal = async (req, res) => {
       next(err);
     }
   };
-
 //ini hapus jadwal 
-const deleteJadwal = async (req, res) => {
+  const deleteJadwal = async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -92,7 +91,7 @@ const deleteJadwal = async (req, res) => {
   } catch (error) {
     sendResponse(500, error, 'Terjadi kesalahan saat menghapus jadwal', res);
   }
-};
+  };
 
 
 
@@ -124,7 +123,6 @@ const deleteUser = async (req, res, next) => {
     next(err);
   }
 };
-
 //ini find user 
 const findUser = async (req, res, next) => {
   const { uuid } = req.params;
