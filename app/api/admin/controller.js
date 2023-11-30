@@ -94,8 +94,6 @@ const createJadwal = async (req, res) => {
   };
 
 
-
-
 //ini liat semua user
 const getAllUsers = async (req, res, next) => {
   try {

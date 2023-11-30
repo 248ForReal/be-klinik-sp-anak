@@ -21,13 +21,13 @@ router.get('/pasien', getallantrian,checkAdminRole);
 router.get('/pasien/:id', findantrian);
 
 //update antrian status menunggu ,mulai, selesai
-router.put('/patients/status/:id', update_status);
+router.put('/pasien/status/:id', update_status);
 
 //update data antrian pasienn
-router.put('/patients/data/:id', updatedData);
+router.put('/pasien/data/:id', updatedData);
 
 //hapus antrian
-router.delete('/patients/:id', hapusAntrian);
+router.delete('/pasien/:id', hapusAntrian);
 
 
 //buat jadwal

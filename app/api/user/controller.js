@@ -7,24 +7,77 @@ const sendResponse = require('../../respon');
 
 //liat berapa lagi antrian yg ditunggu
 const antrianBerapa = async (req, res, next) => {
-    const email = req.params.email;
-  
-    try {
-      const dataPasien = await pasien.findOne({ email: email });
-  
-      if (dataPasien) {
-        const response = {
-          email: email,
-          antrianBerapaLagi: dataPasien.nomor_antrian
-        };
-        sendResponse(200, response, `Email ${email} memiliki nomor antrian ke-${dataPasien.nomor_antrian}`, res);
-      } else {
-        sendResponse(404, null, `Email ${email} tidak ditemukan`, res);
+  const email = req.params.email;
+
+  try {
+    const dataPasien = await pasien.findOne({ email: email });
+
+    if (dataPasien) {
+      let antrianBerapaLagi = dataPasien.nomor_antrian;
+
+      if (antrianBerapaLagi === 1) {
+        antrianBerapaLagi = 0;
       }
-    } catch (err) {
-      next(err);
+
+      const response = {
+        email: email,
+        antrianBerapaLagi: antrianBerapaLagi
+      };
+
+      sendResponse(
+        200,
+        response,
+        `Email ${email} memiliki nomor antrian ke-${antrianBerapaLagi}`,
+        res
+      );
+    } else {
+      sendResponse(404, null, `Email ${email} tidak ditemukan`, res);
     }
-  };
+  } catch (err) {
+    next(err);
+  }
+};
+
+//liat kunjungan terakhir kali
+const kunjunganTerakhir = async (req, res, next) => {
+  const email = req.params.email;
+
+  try {
+    const dataUser = await User.findOne({ email: email });
+
+    if (dataUser && dataUser.riwayat.length > 0) {
+      const riwayatTerbaru = dataUser.riwayat[dataUser.riwayat.length - 1]; // Mengambil riwayat terakhir dari indeks paling besar
+      const tanggalTerakhirKunjungan = riwayatTerbaru.createdAt;
+      const selisihHari = hitungSelisihHari(tanggalTerakhirKunjungan);
+
+      const response = {
+        email: email,
+        hariTerakhirKunjungan: selisihHari
+      };
+
+      sendResponse(
+        200,
+        response,
+        `Email ${email} terakhir kali berkunjung ke klinik ${selisihHari} hari yang lalu`,
+        res
+      );
+    } else {
+      sendResponse(404, null, `Email ${email} tidak ditemukan atau tidak memiliki riwayat kunjungan`, res);
+    }
+  } catch (err) {
+    next(err);
+  }
+};
+const hitungSelisihHari = (tanggal) => {
+  const tanggalHariIni = new Date();
+  const options = { timeZone: 'Asia/Singapore' };
+  const tanggalTerakhir = new Date(tanggal.toLocaleString('en-US', options));
+
+  const selisihMillis = tanggalHariIni.getTime() - tanggalTerakhir.getTime();
+  const selisihHari = Math.floor(selisihMillis / (1000 * 60 * 60 * 24));
+  return selisihHari;
+};
+
 //liat udah berapa kali ke klinik
 const history = async (req, res, next) => {
     const { uuid } = req.params;
@@ -118,5 +171,6 @@ module.exports = {
  liatantrian,
  regis_antrian,
  antrianBerapa,
- history
+ history,
+ kunjunganTerakhir
 };
